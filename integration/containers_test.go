@@ -1,30 +1,32 @@
-//go:build testkitcontainers
+//go:build integration
 
-package testkit
+package integration_test
 
 import (
 	"os"
 	"testing"
 	"testing/fstest"
 
+	qt "github.com/frankban/quicktest"
 	"github.com/testcontainers/testcontainers-go"
 
 	"go.5x5.cz/ptah/dbschema"
+	"go.5x5.cz/ptah/testkit"
 )
 
 func TestStartPostgresAppliesMigrations(t *testing.T) {
 	skipIfContainerProviderUnavailable(t)
-	testContainerDatabase(t, StartPostgres(t, WithReuseByName("ptah-testkit-postgres")))
+	testContainerDatabase(t, testkit.StartPostgres(t, testkit.WithReuseByName("ptah-testkit-postgres")))
 }
 
 func TestStartMySQLAppliesMigrations(t *testing.T) {
 	skipIfContainerProviderUnavailable(t)
-	testContainerDatabase(t, StartMySQL(t, WithReuseByName("ptah-testkit-mysql")))
+	testContainerDatabase(t, testkit.StartMySQL(t, testkit.WithReuseByName("ptah-testkit-mysql")))
 }
 
 func TestStartMariaDBAppliesMigrations(t *testing.T) {
 	skipIfContainerProviderUnavailable(t)
-	testContainerDatabase(t, StartMariaDB(t, WithReuseByName("ptah-testkit-mariadb")))
+	testContainerDatabase(t, testkit.StartMariaDB(t, testkit.WithReuseByName("ptah-testkit-mariadb")))
 }
 
 func skipIfContainerProviderUnavailable(t *testing.T) {
@@ -37,6 +39,7 @@ func skipIfContainerProviderUnavailable(t *testing.T) {
 
 func testContainerDatabase(t *testing.T, db *dbschema.DatabaseConnection) {
 	t.Helper()
+	c := qt.New(t)
 
 	migrations := fstest.MapFS{
 		"000001_create_users.up.sql": {
@@ -46,14 +49,10 @@ func testContainerDatabase(t *testing.T, db *dbschema.DatabaseConnection) {
 			Data: []byte("DROP TABLE users;"),
 		},
 	}
-	ApplyMigrationsFromFS(t, db, migrations)
-	Seed(t, db, []byte("INSERT INTO users (id, email) VALUES (1, 'a@example.com');"))
+	testkit.ApplyMigrationsFromFS(t, db, migrations)
+	testkit.Seed(t, db, []byte("INSERT INTO users (id, email) VALUES (1, 'a@example.com');"))
 
 	var count int
-	if err := db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count); err != nil {
-		t.Fatalf("count users: %v", err)
-	}
-	if count != 1 {
-		t.Fatalf("users count = %d, want 1", count)
-	}
+	c.Assert(db.QueryRow("SELECT COUNT(*) FROM users").Scan(&count), qt.IsNil)
+	c.Assert(count, qt.Equals, 1)
 }
