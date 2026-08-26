@@ -26,7 +26,6 @@ import (
 	"go.5x5.cz/ptah/core/sqlutil"
 	"go.5x5.cz/ptah/dbschema"
 	dbtypes "go.5x5.cz/ptah/dbschema/types"
-	"go.5x5.cz/ptah/internal/atlasurl"
 	"go.5x5.cz/ptah/migration/migrator"
 )
 
@@ -146,7 +145,7 @@ func StartSQLite(t testing.TB, opts ...Option) *dbschema.DatabaseConnection {
 		dbPath = filepath.Join(t.TempDir(), "ptah-test.sqlite")
 	}
 
-	dbURL := atlasurl.SQLiteURLFromPath(dbPath)
+	dbURL := sqliteURLFromPath(dbPath)
 	conn := connectForTest(t, cfg.ctx, dbURL)
 	t.Cleanup(func() {
 		requireNoError(t, conn.Close(), "close SQLite connection")
@@ -563,4 +562,22 @@ func compareColumns(a, b dbtypes.DBColumn) int {
 		return a.OrdinalPosition - b.OrdinalPosition
 	}
 	return strings.Compare(a.Name, b.Name)
+}
+
+// sqliteURLFromPath spells a filesystem path as the SQLite URL Ptah's
+// connector accepts.
+//
+// Copied from ptah's internal/atlasurl rather than imported: an internal
+// package is importable only inside its own module, and this module left that
+// one when testkit moved to its own repository. Promoting a four-line helper to
+// ptah's public API to keep one call site is a worse trade than a copy that
+// says where it came from.
+//
+// It must keep agreeing with that original. The escaping is what matters: a
+// path with a space or a percent sign is not a URL until it is escaped, and
+// ToSlash is what makes a Windows path one at all.
+func sqliteURLFromPath(path string) string {
+	cleaned := filepath.ToSlash(filepath.Clean(path))
+	escaped := (&url.URL{Path: cleaned}).EscapedPath()
+	return "sqlite:file:" + escaped
 }

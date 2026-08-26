@@ -4,6 +4,15 @@
 need real databases. It keeps `testcontainers-go` out of Ptah's main module
 graph while giving users a small public API for migration and schema tests.
 
+It lives in its own repository, [`stokaro/ptah-testkit`](https://github.com/stokaro/ptah-testkit),
+and depends on [`stokaro/ptah`](https://github.com/stokaro/ptah) one way. The
+import path is unchanged: this module is still `go.5x5.cz/ptah/testkit`, and
+nothing a consumer imports moves.
+
+Because there is no `replace` directive, every build here resolves the
+published Ptah module from the proxy. A change to Ptah's public API reaches
+this module when its `require` line is bumped.
+
 ```go
 package example_test
 

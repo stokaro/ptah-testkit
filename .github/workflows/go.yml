@@ -1,0 +1,49 @@
+# Build, vet and test the testkit module.
+#
+# There is no `replace go.5x5.cz/ptah => ..` here, and that is the point of the
+# module living in its own repository: every job resolves the PUBLISHED root
+# from the proxy, so the require line cannot name a release that does not
+# exist. In the parent repository that guarantee needed a dedicated job to
+# strip the replace and re-resolve; here it is a property of every build.
+#
+# The cost is the other half of the same coin: a change to ptah's public API
+# reaches this module when its require line is bumped, not when the change
+# lands. That is what the bump is for.
+name: Go
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build, vet and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Verify the module is tidy
+        run: |
+          set -euo pipefail
+          cp go.mod go.mod.before
+          cp go.sum go.sum.before
+          go mod tidy
+          diff -u go.mod.before go.mod || { echo "::error file=go.mod::run 'go mod tidy' and commit the result"; exit 1; }
+          diff -u go.sum.before go.sum || { echo "::error file=go.sum::run 'go mod tidy' and commit the result"; exit 1; }
+          rm -f go.mod.before go.sum.before
+      - run: go build ./...
+      - run: go vet ./...
+      # The container-backed tests need a Docker daemon, which the runner has.
+      - run: go test ./... -count=1
