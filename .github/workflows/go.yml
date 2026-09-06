@@ -1,6 +1,6 @@
 # Build, vet and test the testkit module.
 #
-# There is no `replace go.5x5.cz/ptah => ..` here, and that is the point of the
+# There is no `replace ptah.run => ..` here, and that is the point of the
 # module living in its own repository: every job resolves the PUBLISHED root
 # from the proxy, so the require line cannot name a release that does not
 # exist. In the parent repository that guarantee needed a dedicated job to
