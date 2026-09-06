@@ -10,8 +10,8 @@ import (
 	qt "github.com/frankban/quicktest"
 	"github.com/testcontainers/testcontainers-go"
 
-	"go.5x5.cz/ptah/dbschema"
-	"go.5x5.cz/ptah/testkit"
+	"ptah.run/dbschema"
+	"ptah.run/testkit"
 )
 
 func TestStartPostgresAppliesMigrations(t *testing.T) {
